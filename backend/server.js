@@ -1,4 +1,4 @@
-// backend/server.js
+
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -7,16 +7,14 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = 3000;
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Configuración de MySQL
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: '0000', // PON AQUÍ TU CONTRASEÑA
+  password: '0000',
   database: 'galeria_arte'
 });
 
@@ -57,7 +55,7 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// ==================== RUTAS DE ARTISTAS ====================
+//ARTISTAS
 
 // Obtener todos los artistas
 app.get('/api/artistas', (req, res) => {
@@ -125,9 +123,9 @@ app.delete('/api/artistas/:id', (req, res) => {
   });
 });
 
-// ==================== RUTAS DE OBRAS ====================
+// OBRAS
 
-// Obtener todas las obras con información del artista
+// Obtener todas las obras 
 app.get('/api/obras', (req, res) => {
   const query = `
     SELECT o.*, CONCAT(a.nombre, ' ', a.apellido) as nombre_artista
@@ -205,7 +203,7 @@ app.delete('/api/obras/:id', (req, res) => {
   });
 });
 
-// ==================== RUTAS DE EXPOSICIONES ====================
+// EXPOSICIONES
 
 // Obtener todas las exposiciones
 app.get('/api/exposiciones', (req, res) => {
@@ -256,7 +254,7 @@ app.post('/api/exposiciones', (req, res) => {
   });
 });
 
-// ==================== RUTAS DE CLIENTES ====================
+// CLIENTES 
 
 // Obtener todos los clientes
 app.get('/api/clientes', (req, res) => {
@@ -266,6 +264,20 @@ app.get('/api/clientes', (req, res) => {
       return res.status(500).json({ error: err.message });
     }
     res.json(results);
+  });
+});
+
+// Obtener un cliente por ID
+app.get('/api/clientes/:id', (req, res) => {
+  const query = 'SELECT * FROM clientes WHERE id = ?';
+  db.query(query, [req.params.id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Cliente no encontrado' });
+    }
+    res.json(results[0]);
   });
 });
 
@@ -284,7 +296,50 @@ app.post('/api/clientes', (req, res) => {
   });
 });
 
-// ==================== RUTAS DE VENTAS ====================
+// 🆕 Actualizar cliente
+app.put('/api/clientes/:id', (req, res) => {
+  const { nombre, apellido, email, telefono, direccion, ciudad, pais } = req.body;
+  
+  const query = `UPDATE clientes SET nombre = ?, apellido = ?, email = ?, telefono = ?, 
+                 direccion = ?, ciudad = ?, pais = ? WHERE id = ?`;
+  
+  db.query(query, [nombre, apellido, email, telefono, direccion, ciudad, pais, req.params.id], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, message: 'Cliente actualizado exitosamente' });
+  });
+});
+
+// 🆕 Eliminar cliente
+app.delete('/api/clientes/:id', (req, res) => {
+  // Primero verificar si el cliente tiene ventas
+  const checkQuery = 'SELECT COUNT(*) as ventas FROM ventas WHERE cliente_id = ?';
+  
+  db.query(checkQuery, [req.params.id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
+    if (results[0].ventas > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el cliente porque tiene ventas asociadas',
+        message: 'Este cliente tiene ventas registradas. Elimina primero sus ventas.'
+      });
+    }
+    
+    // Si no tiene ventas, eliminar
+    const deleteQuery = 'DELETE FROM clientes WHERE id = ?';
+    db.query(deleteQuery, [req.params.id], (err) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ success: true, message: 'Cliente eliminado exitosamente' });
+    });
+  });
+});
+
+// VENTAS 
 
 // Obtener todas las ventas
 app.get('/api/ventas', (req, res) => {
@@ -305,11 +360,32 @@ app.get('/api/ventas', (req, res) => {
   });
 });
 
+// Obtener una venta por ID
+app.get('/api/ventas/:id', (req, res) => {
+  const query = `
+    SELECT v.*, o.titulo as obra_titulo, 
+           CONCAT(c.nombre, ' ', c.apellido) as cliente_nombre
+    FROM ventas v
+    JOIN obras o ON v.obra_id = o.id
+    JOIN clientes c ON v.cliente_id = c.id
+    WHERE v.id = ?
+  `;
+  
+  db.query(query, [req.params.id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Venta no encontrada' });
+    }
+    res.json(results[0]);
+  });
+});
+
 // Crear nueva venta
 app.post('/api/ventas', (req, res) => {
   const { obra_id, cliente_id, precio_venta, fecha_venta, metodo_pago, notas } = req.body;
   
-  // Iniciar transacción para actualizar estado de obra
   db.beginTransaction((err) => {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -348,9 +424,82 @@ app.post('/api/ventas', (req, res) => {
   });
 });
 
-// ==================== ESTADÍSTICAS ====================
+// Actualizar venta
+app.put('/api/ventas/:id', (req, res) => {
+  const { precio_venta, fecha_venta, metodo_pago, notas } = req.body;
+  
+  const query = `UPDATE ventas SET precio_venta = ?, fecha_venta = ?, metodo_pago = ?, notas = ? 
+                 WHERE id = ?`;
+  
+  db.query(query, [precio_venta, fecha_venta, metodo_pago, notas, req.params.id], (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, message: 'Venta actualizada exitosamente' });
+  });
+});
 
-// Dashboard - Estadísticas generales
+// Eliminar venta 
+app.delete('/api/ventas/:id', (req, res) => {
+  db.beginTransaction((err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
+    // Obtener la obra_id de la venta antes de eliminarla
+    const getObraQuery = 'SELECT obra_id FROM ventas WHERE id = ?';
+    
+    db.query(getObraQuery, [req.params.id], (err, results) => {
+      if (err) {
+        return db.rollback(() => {
+          res.status(500).json({ error: err.message });
+        });
+      }
+      
+      if (results.length === 0) {
+        return db.rollback(() => {
+          res.status(404).json({ message: 'Venta no encontrada' });
+        });
+      }
+      
+      const obra_id = results[0].obra_id;
+      
+      // Eliminar la venta
+      const deleteQuery = 'DELETE FROM ventas WHERE id = ?';
+      db.query(deleteQuery, [req.params.id], (err) => {
+        if (err) {
+          return db.rollback(() => {
+            res.status(500).json({ error: err.message });
+          });
+        }
+        
+        // 3. Actualizar el estado de la obra a 'disponible'
+        const updateObraQuery = 'UPDATE obras SET estado = "disponible" WHERE id = ?';
+        db.query(updateObraQuery, [obra_id], (err) => {
+          if (err) {
+            return db.rollback(() => {
+              res.status(500).json({ error: err.message });
+            });
+          }
+          
+          db.commit((err) => {
+            if (err) {
+              return db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+            }
+            res.json({ 
+              success: true, 
+              message: 'Venta eliminada exitosamente. La obra está nuevamente disponible.' 
+            });
+          });
+        });
+      });
+    });
+  });
+});
+
+//ESTADÍSTICAS 
 app.get('/api/estadisticas', (req, res) => {
   const queries = {
     totalObras: 'SELECT COUNT(*) as total FROM obras',
@@ -377,13 +526,13 @@ app.get('/api/estadisticas', (req, res) => {
   });
 });
 
-// ==================== SERVIDOR ====================
+//  SERVIDOR
 
 app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
+  console.log(`📋 API disponible en http://localhost:${port}/api`);
 });
 
-// Manejo de cierre graceful
 process.on('SIGINT', () => {
   db.end((err) => {
     if (err) {
