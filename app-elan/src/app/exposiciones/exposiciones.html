@@ -1,4 +1,3 @@
-
 <div class="exposiciones-container">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
@@ -176,6 +175,30 @@
               required
               [readonly]="soloLectura"
               class="form-input">
+          </div>
+
+          <!-- Campo: Ubicación -->
+          <div class="form-group">
+            <label>Ubicación:</label>
+            <input
+              type="text"
+              [(ngModel)]="exposicionSeleccionada!.ubicacion"
+              name="ubicacion"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="Ej: Sala Principal, Sala 2">
+          </div>
+
+          <!-- Campo: Curador -->
+          <div class="form-group">
+            <label>Curador:</label>
+            <input
+              type="text"
+              [(ngModel)]="exposicionSeleccionada!.curador"
+              name="curador"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="Nombre del curador">
           </div>
 
           <!-- Campo: Nombre de imagen -->
