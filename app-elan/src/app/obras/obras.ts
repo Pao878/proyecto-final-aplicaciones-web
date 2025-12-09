@@ -330,7 +330,7 @@ export class ObrasComponent implements OnInit {
     return textos[estado || 'disponible'] || estado || 'Disponible';
   }
 
-  // ============ MÉTODO PARA CONSTRUIR URL DE IMAGEN ============
+  // MÉTODO PARA CONSTRUIR URL DE IMAGEN
   getImagenUrl(nombreImagen: string | undefined): string {
     if (!nombreImagen) {
       return 'assets/imagenes/default.jpg';
