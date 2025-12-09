@@ -1,0 +1,312 @@
+<div class="ventas-container">
+  <!-- Header con estadísticas -->
+  <div class="header-section">
+    <div class="titulo-area">
+      <h1 class="titulo-principal">GESTIÓN DE VENTAS</h1>
+      <div class="estadisticas-rapidas">
+        <div class="stat-card">
+          <i class="bi bi-receipt"></i>
+          <div class="stat-info">
+            <span class="stat-valor">{{ ventas.length }}</span>
+            <span class="stat-label">Ventas Totales</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-nuevo" (click)="abrirModal()">
+      <i class="bi bi-plus-circle"></i> Nueva Venta
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros-section">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input
+        type="text"
+        placeholder="Buscar por obra, cliente..."
+        [(ngModel)]="filtroTexto"
+        (input)="filtrarVentas()">
+    </div>
+
+    <div class="filtros-metodo">
+      <button
+        class="filtro-btn"
+        [class.activo]="filtroMetodo === 'todos'"
+        (click)="filtrarPorMetodo('todos')">
+        Todos
+      </button>
+      <button
+        class="filtro-btn efectivo"
+        [class.activo]="filtroMetodo === 'efectivo'"
+        (click)="filtrarPorMetodo('efectivo')">
+        <i class="bi bi-cash"></i> Efectivo
+      </button>
+      <button
+        class="filtro-btn tarjeta"
+        [class.activo]="filtroMetodo === 'tarjeta'"
+        (click)="filtrarPorMetodo('tarjeta')">
+        <i class="bi bi-credit-card"></i> Tarjeta
+      </button>
+      <button
+        class="filtro-btn transferencia"
+        [class.activo]="filtroMetodo === 'transferencia'"
+        (click)="filtrarPorMetodo('transferencia')">
+        <i class="bi bi-arrow-left-right"></i> Transferencia
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla de Ventas -->
+  <div class="tabla-container" *ngIf="!cargando && ventasFiltradas.length > 0">
+    <table class="tabla-ventas">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Fecha</th>
+          <th>Obra/Cliente</th>
+          <th>Precio</th>
+          <th>Método Pago</th>
+          <th>Notas</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let venta of ventasFiltradas" class="fila-venta">
+          <td class="id-venta">#{{ venta.id }}</td>
+          <td>{{ venta.fecha_venta | date: 'dd/MM/yyyy' }}</td>
+          <td class="obra-titulo">
+            <i class="bi bi-palette"></i>
+            {{ venta.obra_titulo || 'Obra #' + venta.obra_id }}
+          </td>
+          <td class="cliente-nombre">
+            <i class="bi bi-person"></i>
+            {{ venta.cliente_nombre || 'Cliente #' + venta.cliente_id }}
+          </td>
+          <td class="precio">{{ venta.precio_venta | currency: 'USD':'symbol':'1.2-2' }}</td>
+          <td>
+            <span class="metodo-badge" [class]="venta.metodo_pago">
+              <i [class]="getMetodoPagoIcono(venta.metodo_pago)"></i>
+              {{ getMetodoPagoTexto(venta.metodo_pago) }}
+            </span>
+          </td>
+          <td class="notas">
+            <span *ngIf="venta.notas" [title]="venta.notas">
+              {{ venta.notas.substring(0, 30) }}{{ venta.notas.length > 30 ? '...' : '' }}
+            </span>
+            <span *ngIf="!venta.notas" class="text-muted">-</span>
+          </td>
+          <td class="acciones">
+            <button class="btn-accion btn-ver" (click)="verDetalle(venta)" title="Ver detalle">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn-accion btn-eliminar" (click)="eliminarVenta(venta.id!)" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="cargando">
+    <div class="spinner"></div>
+    <p>Cargando ventas...</p>
+  </div>
+
+  <!-- Sin ventas -->
+  <div class="sin-datos" *ngIf="!cargando && ventasFiltradas.length === 0 && ventas.length === 0">
+    <i class="bi bi-receipt"></i>
+    <p>No hay ventas registradas</p>
+    <button class="btn-nuevo" (click)="abrirModal()">Registrar primera venta</button>
+  </div>
+
+  <!-- Sin resultados -->
+  <div class="sin-datos" *ngIf="!cargando && ventasFiltradas.length === 0 && ventas.length > 0">
+    <i class="bi bi-search"></i>
+    <p>No se encontraron ventas con ese criterio</p>
+    <button class="btn-nuevo" (click)="limpiarFiltros()">Limpiar filtros</button>
+  </div>
+
+  <!-- Modal Nueva Venta -->
+  <div class="modal-backdrop" *ngIf="mostrarModal" (click)="cerrarModal()">
+    <div class="modal-contenido" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Nueva Venta</h2>
+        <button class="btn-cerrar" (click)="cerrarModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form class="formulario" (ngSubmit)="guardarVenta()">
+        <!-- Selección de Obra -->
+        <div class="form-group">
+          <label>Obra a Vender *</label>
+          <select [(ngModel)]="formulario.obra_id" name="obra_id" required (change)="onObraSeleccionada()">
+            <option value="">Seleccione una obra</option>
+            <option *ngFor="let obra of obrasDisponibles" [value]="obra.id">
+              {{ obra.titulo }} - {{ obra.precio | currency: 'USD':'symbol':'1.0-0' }}
+            </option>
+          </select>
+          <small class="ayuda-texto">Solo se muestran obras disponibles</small>
+        </div>
+
+        <!-- Selección de Cliente -->
+        <div class="form-group">
+          <label>Cliente *</label>
+          <select [(ngModel)]="formulario.cliente_id" name="cliente_id" required>
+            <option value="">Seleccione un cliente</option>
+            <option *ngFor="let cliente of clientes" [value]="cliente.id">
+              {{ cliente.nombre }} {{ cliente.apellido }} - {{ cliente.email }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Precio de Venta -->
+        <div class="form-group">
+          <label>Precio de Venta *</label>
+          <div class="input-con-icono">
+            <i class="bi bi-currency-dollar"></i>
+            <input
+              type="number"
+              [(ngModel)]="formulario.precio_venta"
+              name="precio_venta"
+              step="0.01"
+              min="0"
+              required>
+          </div>
+          <small class="ayuda-texto" *ngIf="precioSugerido > 0">
+            Precio sugerido: {{ precioSugerido | currency: 'USD':'symbol':'1.2-2' }}
+          </small>
+        </div>
+
+        <!-- Fecha de Venta -->
+        <div class="form-group">
+          <label>Fecha de Venta *</label>
+          <input type="date" [(ngModel)]="formulario.fecha_venta" name="fecha_venta" required>
+        </div>
+
+        <!-- Método de Pago -->
+        <div class="form-group">
+          <label>Método de Pago *</label>
+          <div class="metodos-pago">
+            <label class="metodo-opcion">
+              <input
+                type="radio"
+                [(ngModel)]="formulario.metodo_pago"
+                name="metodo_pago"
+                value="efectivo"
+                required>
+              <span class="metodo-card efectivo">
+                <i class="bi bi-cash"></i>
+                <span>Efectivo</span>
+              </span>
+            </label>
+            <label class="metodo-opcion">
+              <input
+                type="radio"
+                [(ngModel)]="formulario.metodo_pago"
+                name="metodo_pago"
+                value="tarjeta"
+                required>
+              <span class="metodo-card tarjeta">
+                <i class="bi bi-credit-card"></i>
+                <span>Tarjeta</span>
+              </span>
+            </label>
+            <label class="metodo-opcion">
+              <input
+                type="radio"
+                [(ngModel)]="formulario.metodo_pago"
+                name="metodo_pago"
+                value="transferencia"
+                required>
+              <span class="metodo-card transferencia">
+                <i class="bi bi-arrow-left-right"></i>
+                <span>Transferencia</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Notas -->
+        <div class="form-group">
+          <label>Notas Adicionales</label>
+          <textarea [(ngModel)]="formulario.notas" name="notas" rows="3"
+                    placeholder="Información adicional sobre la venta..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn-guardar">
+            <i class="bi bi-check-circle"></i> Registrar Venta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detalle -->
+  <div class="modal-backdrop" *ngIf="mostrarDetalle" (click)="cerrarDetalle()">
+    <div class="modal-detalle" (click)="$event.stopPropagation()">
+      <button class="btn-cerrar-detalle" (click)="cerrarDetalle()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <div class="detalle-contenido" *ngIf="ventaSeleccionada">
+        <div class="detalle-header">
+          <div class="header-info">
+            <h2>Venta #{{ ventaSeleccionada.id }}</h2>
+            <p class="fecha-registro">
+              Registrada el {{ ventaSeleccionada.fecha_registro | date: 'dd/MM/yyyy HH:mm' }}
+            </p>
+          </div>
+          <div class="precio-destacado">
+            {{ ventaSeleccionada.precio_venta | currency: 'USD':'symbol':'1.2-2' }}
+          </div>
+        </div>
+
+        <div class="detalle-body">
+          <div class="info-seccion">
+            <h3><i class="bi bi-palette"></i> Obra Vendida</h3>
+            <div class="info-destacada">
+              {{ ventaSeleccionada.obra_titulo || 'Obra #' + ventaSeleccionada.obra_id }}
+            </div>
+          </div>
+
+          <div class="info-seccion">
+            <h3><i class="bi bi-person"></i> Cliente</h3>
+            <div class="info-destacada">
+              {{ ventaSeleccionada.cliente_nombre || 'Cliente #' + ventaSeleccionada.cliente_id }}
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label"><i class="bi bi-calendar-event"></i> Fecha de Venta:</span>
+              <span class="valor">{{ ventaSeleccionada.fecha_venta | date: 'dd/MM/yyyy' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="label">
+                <i [class]="getMetodoPagoIcono(ventaSeleccionada.metodo_pago)"></i>
+                Método de Pago:
+              </span>
+              <span class="valor">
+                <span class="metodo-badge" [class]="ventaSeleccionada.metodo_pago">
+                  {{ getMetodoPagoTexto(ventaSeleccionada.metodo_pago) }}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div class="info-seccion" *ngIf="ventaSeleccionada.notas">
+            <h3><i class="bi bi-file-text"></i> Notas</h3>
+            <p class="notas-completas">{{ ventaSeleccionada.notas }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

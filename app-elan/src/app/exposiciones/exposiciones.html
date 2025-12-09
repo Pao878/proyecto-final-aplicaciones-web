@@ -1,0 +1,209 @@
+
+<div class="exposiciones-container">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+  <!-- Título y botones de acción -->
+  <div class="title-section">
+    <h1 class="main-title">GESTIÓN DE EXPOSICIONES</h1>
+    <div class="action-buttons">
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.AGREGAR"
+        (click)="setModoAccion(ModoAccion.AGREGAR)"
+        title="Agregar exposición">
+        <i class="bi bi-plus-circle"></i>
+      </button>
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.EDITAR"
+        (click)="setModoAccion(ModoAccion.EDITAR)"
+        title="Editar exposición">
+        <i class="bi bi-pencil-square"></i>
+      </button>
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.ELIMINAR"
+        (click)="setModoAccion(ModoAccion.ELIMINAR)"
+        title="Eliminar exposición">
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="search-section">
+    <div class="search-container">
+      <input
+        type="search"
+        [(ngModel)]="busqueda"
+        (input)="filtrarExposiciones()"
+        placeholder="Buscar exposiciones..."
+        class="search-input">
+      <button class="search-btn">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mensajes-->
+  <div *ngIf="mensajeAccion" class="mensaje-accion">
+    <p>{{ mensajeAccion }}</p>
+    <button class="btn-cancelar-accion" (click)="cancelarAccion()">Cancelar</button>
+  </div>
+  <div *ngIf="cargando" class="loading-container">
+    <div class="spinner"></div>
+    <p>Cargando exposiciones...</p>
+  </div>
+  <div *ngIf="error && !cargando" class="alert-error">
+    <p>{{ error }}</p>
+    <button (click)="cargarExposiciones()">Reintentar</button>
+  </div>
+  <div *ngIf="!cargando && !error" class="exposiciones-grid">
+    <div
+      class="exposicion-card"
+      *ngFor="let exposicion of exposicionesFiltradas"
+      [class.seleccionable]="modoSeleccion"
+      [class.seleccionada]="exposicionSeleccionada?.id === exposicion.id"
+      (click)="seleccionarExposicion(exposicion)">
+
+      <div class="exposicion-imagen-container">
+        <img
+          [src]="getImagenUrl(exposicion.imagen)"
+          [alt]="exposicion.titulo"
+          (error)="$any($event.target).src='assets/imagenes/default-exhibition.jpg'"
+          class="exposicion-imagen">
+
+        <div *ngIf="modoSeleccion && exposicionSeleccionada?.id === exposicion.id" class="check-mark"></div>
+        <div class="exposicion-badge" [class.activa]="isExposicionActiva(exposicion)">
+          {{ isExposicionActiva(exposicion) ? 'ACTIVA' : 'FINALIZADA' }}
+        </div>
+      </div>
+      <div class="exposicion-info">
+        <h3 class="exposicion-nombre">{{ exposicion.titulo }}</h3>
+        <p class="exposicion-fechas">
+          <i class="bi bi-calendar-event"></i>
+          {{ formatearFecha(exposicion.fecha_inicio) }} - {{ formatearFecha(exposicion.fecha_fin) }}
+        </p>
+        <p class="exposicion-descripcion" *ngIf="exposicion.descripcion">
+          {{ exposicion.descripcion.substring(0, 80) }}{{ exposicion.descripcion.length > 80 ? '...' : '' }}
+        </p>
+      </div>
+    </div>
+
+
+    <div *ngIf="exposicionesFiltradas.length === 0" class="sin-resultados">
+      <p>No se encontraron exposiciones</p>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+
+      <div class="modal-left">
+        <div class="modal-imagen-container">
+          <img
+            [src]="getImagenUrl(exposicionSeleccionada?.imagen)"
+            [alt]="exposicionSeleccionada?.titulo"
+            (error)="$any($event.target).src='assets/imagenes/default-exhibition.jpg'"
+            class="modal-imagen">
+        </div>
+        <p class="modal-nombre" *ngIf="exposicionSeleccionada">
+          {{ exposicionSeleccionada.titulo }}
+        </p>
+        <div class="modal-estado" *ngIf="exposicionSeleccionada"
+             [class.activa]="isExposicionActiva(exposicionSeleccionada)">
+          {{ isExposicionActiva(exposicionSeleccionada) ? ' ACTIVA' : ' FINALIZADA' }}
+        </div>
+      </div>
+
+      <!-- Parte derecha: Formulario -->
+      <div class="modal-right">
+          <button class="btn-close" (click)="cerrarModal()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        <h2 class="modal-titulo">
+          {{ modoActual === ModoAccion.AGREGAR ? 'Nueva Exposición' :
+             modoActual === ModoAccion.EDITAR ? 'Editar Exposición' :
+             'Detalle de Exposición' }}
+        </h2>
+
+        <form class="modal-form" (ngSubmit)="guardarExposicion()">
+
+          <!-- Campo: Título -->
+          <div class="form-group">
+            <label>Título de la exposición: *</label>
+            <input
+              type="text"
+              [(ngModel)]="exposicionSeleccionada!.titulo"
+              name="titulo"
+              required
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="Ej: Arte Contemporáneo">
+          </div>
+
+          <!-- Campo: Descripción -->
+          <div class="form-group">
+            <label>Descripción:</label>
+            <textarea
+              [(ngModel)]="exposicionSeleccionada!.descripcion"
+              name="descripcion"
+              rows="4"
+              [readonly]="soloLectura"
+              class="form-textarea"
+              placeholder="Describe la exposición..."></textarea>
+          </div>
+
+          <!-- Campo: Fecha de inicio -->
+          <div class="form-group">
+            <label>Fecha de inicio: *</label>
+            <input
+              type="date"
+              [(ngModel)]="exposicionSeleccionada!.fecha_inicio"
+              name="fecha_inicio"
+              required
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Fecha de fin -->
+          <div class="form-group">
+            <label>Fecha de fin: *</label>
+            <input
+              type="date"
+              [(ngModel)]="exposicionSeleccionada!.fecha_fin"
+              name="fecha_fin"
+              required
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Nombre de imagen -->
+          <div class="form-group">
+            <label>Nombre de imagen:</label>
+            <input
+              type="text"
+              [(ngModel)]="exposicionSeleccionada!.imagen"
+              name="imagen"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="exposicion1.jpg">
+            <small>
+              Solo escribe el nombre del archivo (ej: exposicion1.jpg). Las imágenes deben estar en assets/imagenes/
+            </small>
+          </div>
+
+          <!-- Botón Guardar -->
+          <button
+            *ngIf="!soloLectura"
+            type="submit"
+            class="btn-guardar">
+            {{ modoActual === ModoAccion.EDITAR ? 'Actualizar Exposición' : 'Guardar Exposición' }}
+          </button>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>

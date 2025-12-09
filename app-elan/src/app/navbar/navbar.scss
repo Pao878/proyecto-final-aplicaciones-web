@@ -1,0 +1,106 @@
+
+.navbar {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem 1rem;
+}
+
+.navbar .container-fluid {
+  background-color: #577399 !important;
+}
+
+
+
+.ima {
+  width: 50px;
+  height: auto;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.navbar-brand {
+  padding: 0;
+  margin-right: 2rem;
+}
+
+.navbar-nav {
+  .nav-item {
+    margin: 0 0.5rem;
+
+    .nav-link {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9) !important;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white !important;
+      }
+
+      &.active {
+        background: rgba(255, 255, 255, 0.15);
+        color: white !important;
+      }
+    }
+  }
+}
+
+.bi {
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateX(3px);
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  }
+}
+
+.navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.3);
+  padding: 0.5rem;
+
+  &:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+  }
+
+  .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  }
+}
+
+@media (max-width: 991px) {
+  .navbar-collapse {
+    background: #577399;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+  }
+
+  .navbar-nav {
+    .nav-item {
+      margin: 0.25rem 0;
+    }
+  }
+
+  .bi {
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .ima {
+    width: 40px;
+  }
+
+  .navbar-nav .nav-item .nav-link {
+    font-size: 1rem;
+    padding: 0.4rem 0.8rem;
+  }
+}

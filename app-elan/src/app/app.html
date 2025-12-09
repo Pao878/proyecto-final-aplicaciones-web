@@ -1,0 +1,3 @@
+<app-navbar *ngIf="!isInicio"></app-navbar>
+<router-outlet (activate)="onActivate($event)"></router-outlet>
+<app-footer></app-footer>

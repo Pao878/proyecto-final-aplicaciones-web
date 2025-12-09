@@ -1,0 +1,217 @@
+<div class="clientes-container">
+  <!-- Header -->
+  <div class="header-section">
+    <h1 class="titulo-principal">GESTIÓN DE CLIENTES</h1>
+    <button class="btn-nuevo" (click)="abrirModal()">
+      <i class="bi bi-person-plus"></i> Nuevo Cliente
+    </button>
+  </div>
+
+  <!-- Buscador -->
+  <div class="buscador-section">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input
+        type="text"
+        placeholder="Buscar por nombre, email o ciudad..."
+        [(ngModel)]="filtroTexto"
+        (input)="filtrarClientes()">
+    </div>
+  </div>
+
+  <!-- Tabla de Clientes -->
+  <div class="tabla-container" *ngIf="!cargando && clientesFiltrados.length > 0">
+    <table class="tabla-clientes">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre Completo</th>
+          <th>Email</th>
+          <th>Teléfono</th>
+          <th>Ciudad</th>
+          <th>País</th>
+          <th>Fecha Registro</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let cliente of clientesFiltrados" class="fila-cliente">
+          <td>{{ cliente.id }}</td>
+          <td class="nombre-completo">
+            <i class="bi bi-person-circle"></i>
+            {{ cliente.nombre }} {{ cliente.apellido }}
+          </td>
+          <td>
+            <a [href]="'mailto:' + cliente.email" class="email-link">
+              {{ cliente.email }}
+            </a>
+          </td>
+          <td>
+            <span *ngIf="cliente.telefono">{{ cliente.telefono }}</span>
+            <span *ngIf="!cliente.telefono" class="text-muted">-</span>
+          </td>
+          <td>{{ cliente.ciudad || '-' }}</td>
+          <td>{{ cliente.pais || '-' }}</td>
+          <td>{{ cliente.fecha_registro | date: 'dd/MM/yyyy' }}</td>
+          <td class="acciones">
+  <button class="btn-accion btn-ver" (click)="verDetalle(cliente)" title="Ver detalle">
+    <i class="bi bi-eye-fill"></i>
+  </button>
+
+  <button class="btn-accion btn-editar" (click)="editarCliente(cliente)" title="Editar">
+    <i class="bi bi-pencil-square"></i>
+  </button>
+
+  <button class="btn-accion btn-eliminar" (click)="eliminarCliente(cliente.id!)" title="Eliminar">
+    <i class="bi bi-trash-fill"></i>
+  </button>
+</td>
+
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="cargando">
+    <div class="spinner"></div>
+    <p>Cargando clientes...</p>
+  </div>
+
+  <div class="sin-datos" *ngIf="!cargando && clientesFiltrados.length === 0 && clientes.length === 0">
+    <i class="bi bi-people"></i>
+    <p>No hay clientes registrados</p>
+    <button class="btn-nuevo" (click)="abrirModal()">Agregar el primero</button>
+  </div>
+
+  <div class="sin-datos" *ngIf="!cargando && clientesFiltrados.length === 0 && clientes.length > 0">
+    <i class="bi bi-search"></i>
+    <p>No se encontraron clientes con ese criterio de búsqueda</p>
+    <button class="btn-nuevo" (click)="limpiarFiltro()">Limpiar búsqueda</button>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="mostrarModal" (click)="cerrarModal()">
+    <div class="modal-contenido" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ clienteSeleccionado ? 'Editar Cliente' : 'Nuevo Cliente' }}</h2>
+        <button class="btn-cerrar" (click)="cerrarModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form class="formulario" (ngSubmit)="guardarCliente()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input type="text" [(ngModel)]="formulario.nombre" name="nombre" required>
+          </div>
+          <div class="form-group">
+            <label>Apellido *</label>
+            <input type="text" [(ngModel)]="formulario.apellido" name="apellido" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" [(ngModel)]="formulario.email" name="email" required>
+        </div>
+
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" [(ngModel)]="formulario.telefono" name="telefono" placeholder="+52 444 123 4567">
+        </div>
+
+        <div class="form-group">
+          <label>Dirección</label>
+          <input type="text" [(ngModel)]="formulario.direccion" name="direccion" placeholder="Calle, número, colonia">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ciudad</label>
+            <input type="text" [(ngModel)]="formulario.ciudad" name="ciudad">
+          </div>
+          <div class="form-group">
+            <label>País</label>
+            <input type="text" [(ngModel)]="formulario.pais" name="pais">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+          <button type="submit" class="btn-guardar">
+            <i class="bi bi-save"></i> Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detalle -->
+  <div class="modal-backdrop" *ngIf="mostrarDetalle" (click)="cerrarDetalle()">
+    <div class="modal-detalle" (click)="$event.stopPropagation()">
+      <button class="btn-cerrar-detalle" (click)="cerrarDetalle()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <div class="detalle-contenido" *ngIf="clienteSeleccionado">
+        <div class="detalle-header">
+          <div class="icono-cliente">
+            <i class="bi bi-person-circle"></i>
+          </div>
+          <div class="header-info">
+            <h2>{{ clienteSeleccionado.nombre }} {{ clienteSeleccionado.apellido }}</h2>
+            <p class="cliente-id">Cliente #{{ clienteSeleccionado.id }}</p>
+          </div>
+        </div>
+
+        <div class="detalle-body">
+          <div class="info-seccion">
+            <h3><i class="bi bi-envelope"></i> Contacto</h3>
+            <div class="info-item">
+              <span class="label">Email:</span>
+              <a [href]="'mailto:' + clienteSeleccionado.email" class="valor">
+                {{ clienteSeleccionado.email }}
+              </a>
+            </div>
+            <div class="info-item" *ngIf="clienteSeleccionado.telefono">
+              <span class="label">Teléfono:</span>
+              <a [href]="'tel:' + clienteSeleccionado.telefono" class="valor">
+                {{ clienteSeleccionado.telefono }}
+              </a>
+            </div>
+          </div>
+
+          <div class="info-seccion" *ngIf="clienteSeleccionado.direccion || clienteSeleccionado.ciudad || clienteSeleccionado.pais">
+            <h3><i class="bi bi-geo-alt"></i> Ubicación</h3>
+            <div class="info-item" *ngIf="clienteSeleccionado.direccion">
+              <span class="label">Dirección:</span>
+              <span class="valor">{{ clienteSeleccionado.direccion }}</span>
+            </div>
+            <div class="info-item" *ngIf="clienteSeleccionado.ciudad">
+              <span class="label">Ciudad:</span>
+              <span class="valor">{{ clienteSeleccionado.ciudad }}</span>
+            </div>
+            <div class="info-item" *ngIf="clienteSeleccionado.pais">
+              <span class="label">País:</span>
+              <span class="valor">{{ clienteSeleccionado.pais }}</span>
+            </div>
+          </div>
+
+          <div class="info-seccion">
+            <h3><i class="bi bi-calendar-check"></i> Información Adicional</h3>
+            <div class="info-item">
+              <span class="label">Fecha de Registro:</span>
+              <span class="valor">{{ clienteSeleccionado.fecha_registro | date: 'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detalle-actions">
+          <button class="btn-editar" (click)="editarDesdeDetalle()">
+            <i class="bi bi-pencil"></i> Editar Cliente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

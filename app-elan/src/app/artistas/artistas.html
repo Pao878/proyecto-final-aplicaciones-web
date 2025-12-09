@@ -1,0 +1,248 @@
+<div class="artistas-container">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+  <!-- Título y botones  -->
+  <div class="title-section">
+    <h1 class="main-title">GESTIÓN DE ARTISTAS</h1>
+    <div class="action-buttons">
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.AGREGAR"
+        (click)="setModoAccion(ModoAccion.AGREGAR)"
+        title="Agregar artista">
+        <i class="bi bi-plus-circle"></i>
+      </button>
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.EDITAR"
+        (click)="setModoAccion(ModoAccion.EDITAR)"
+        title="Editar artista">
+        <i class="bi bi-pencil-square"></i>
+      </button>
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.ELIMINAR"
+        (click)="setModoAccion(ModoAccion.ELIMINAR)"
+        title="Eliminar artista">
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="search-section">
+    <div class="search-container">
+      <input
+        type="search"
+        [(ngModel)]="busqueda"
+        (input)="filtrarArtistas()"
+        placeholder="Buscar artistas..."
+        class="search-input">
+      <button class="search-btn">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </div>
+  <div *ngIf="mensajeAccion" class="mensaje-accion">
+    <p>{{ mensajeAccion }}</p>
+    <button class="btn-cancelar-accion" (click)="cancelarAccion()">Cancelar</button>
+  </div>
+  <div *ngIf="cargando" class="loading-container">
+    <div class="spinner"></div>
+    <p>Cargando artistas...</p>
+  </div>
+
+  <!-- Mensajes -->
+  <div *ngIf="error && !cargando" class="alert-error">
+    <p>{{ error }}</p>
+    <button (click)="cargarArtistas()">Reintentar</button>
+  </div>
+  <div *ngIf="!cargando && !error" class="artistas-grid">
+    <div
+      class="artista-card"
+      *ngFor="let artista of artistasFiltrados"
+      [class.seleccionable]="modoSeleccion"
+      [class.seleccionada]="artistaSeleccionado?.id === artista.id"
+      (click)="seleccionarArtista(artista)">
+
+      <div class="artista-imagen-container">
+        <img
+          [src]="getImagenUrl(artista.imagen)"
+          [alt]="artista.nombre + ' ' + artista.apellido"
+          (error)="$any($event.target).src='assets/imagenes/default-artist.jpg'"
+          class="artista-imagen">
+
+        <!-- Indicador de selección -->
+        <div *ngIf="modoSeleccion && artistaSeleccionado?.id === artista.id" class="check-mark">
+
+        </div>
+      </div>
+
+      <div class="artista-info">
+        <h3 class="artista-nombre">{{ artista.nombre }} {{ artista.apellido }}</h3>
+        <p class="artista-nacionalidad" *ngIf="artista.nacionalidad">
+           {{ artista.nacionalidad }}
+        </p>
+        <p class="artista-biografia" *ngIf="artista.biografia">
+          {{ artista.biografia.substring(0, 80) }}{{ artista.biografia.length > 80 ? '...' : '' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Mensajes -->
+    <div *ngIf="artistasFiltrados.length === 0" class="sin-resultados">
+      <p>No se encontraron artistas</p>
+    </div>
+  </div>
+
+  <!-- para agregar/editar/ver -->
+  <div class="modal-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+
+      <!-- Parte izquierda: Imagen -->
+      <div class="modal-left">
+        <div class="modal-imagen-container">
+          <img
+            [src]="getImagenUrl(artistaSeleccionado?.imagen)"
+            [alt]="artistaSeleccionado?.nombre"
+            (error)="$any($event.target).src='assets/imagenes/default-artist.jpg'"
+            class="modal-imagen">
+        </div>
+        <p class="modal-nombre" *ngIf="artistaSeleccionado">
+          {{ artistaSeleccionado.nombre }} {{ artistaSeleccionado.apellido }}
+        </p>
+        <p class="modal-nacionalidad" *ngIf="artistaSeleccionado?.nacionalidad">
+          🌍 {{ artistaSeleccionado?.nacionalidad }}
+        </p>
+        <p class="modal-edad" *ngIf="artistaSeleccionado?.fecha_nacimiento && calcularEdad(artistaSeleccionado?.fecha_nacimiento)">
+          {{ calcularEdad(artistaSeleccionado?.fecha_nacimiento) }} años
+        </p>
+      </div>
+
+      <!-- Parte derecha: Formulario -->
+      <div class="modal-right">
+          <button class="btn-close" (click)="cerrarModal()">
+           <i class="bi bi-x-lg"></i>
+          </button>
+        <h2 class="modal-titulo">
+          {{ modoActual === ModoAccion.AGREGAR ? 'Nuevo Artista' :
+             modoActual === ModoAccion.EDITAR ? 'Editar Artista' :
+             'Detalle de Artista' }}
+        </h2>
+
+        <form class="modal-form" (ngSubmit)="guardarArtista()">
+
+          <!-- Campo: Nombre -->
+          <div class="form-group">
+            <label>Nombre: *</label>
+            <input
+              type="text"
+              [(ngModel)]="artistaSeleccionado!.nombre"
+              name="nombre"
+              required
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="Ej: Diego">
+          </div>
+
+          <!-- Campo: Apellido -->
+          <div class="form-group">
+            <label>Apellido: *</label>
+            <input
+              type="text"
+              [(ngModel)]="artistaSeleccionado!.apellido"
+              name="apellido"
+              required
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="Ej: Rivera">
+          </div>
+
+          <!-- Campo: Nacionalidad -->
+          <div class="form-group">
+            <label>Nacionalidad:</label>
+            <input
+              type="text"
+              [(ngModel)]="artistaSeleccionado!.nacionalidad"
+              name="nacionalidad"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="Ej: Mexicano">
+          </div>
+
+          <!-- Campo: Fecha de nacimiento -->
+          <div class="form-group">
+            <label>Fecha de nacimiento:</label>
+            <input
+              type="date"
+              [(ngModel)]="artistaSeleccionado!.fecha_nacimiento"
+              name="fecha_nacimiento"
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Email -->
+          <div class="form-group">
+            <label>Email:</label>
+            <input
+              type="email"
+              [(ngModel)]="artistaSeleccionado!.email"
+              name="email"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="ejemplo@correo.com">
+          </div>
+
+          <!-- Campo: Teléfono -->
+          <div class="form-group">
+            <label>Teléfono:</label>
+            <input
+              type="tel"
+              [(ngModel)]="artistaSeleccionado!.telefono"
+              name="telefono"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="+52 123 456 7890">
+          </div>
+
+          <!-- Campo: Biografía -->
+          <div class="form-group">
+            <label>Biografía:</label>
+            <textarea
+              [(ngModel)]="artistaSeleccionado!.biografia"
+              name="biografia"
+              rows="4"
+              [readonly]="soloLectura"
+              class="form-textarea"
+              placeholder="Cuéntanos sobre el artista..."></textarea>
+          </div>
+
+          <!-- Campo: Nombre de imagen -->
+          <div class="form-group">
+            <label>Nombre de imagen:</label>
+            <input
+              type="text"
+              [(ngModel)]="artistaSeleccionado!.imagen"
+              name="imagen"
+              [readonly]="soloLectura"
+              class="form-input"
+              placeholder="artista1.jpg">
+            <small style="color: #7f8c8d; display: block; margin-top: 0.25rem;">
+              Solo escribe el nombre del archivo (ej: artista1.jpg). Las imágenes deben estar en assets/imagenes/
+            </small>
+          </div>
+
+          <!-- Botón Guardar -->
+          <button
+            *ngIf="!soloLectura"
+            type="submit"
+            class="btn-guardar">
+            {{ modoActual === ModoAccion.EDITAR ? 'Actualizar Artista' : 'Guardar Artista' }}
+          </button>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>

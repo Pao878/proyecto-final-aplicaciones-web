@@ -1,0 +1,268 @@
+<div class="obras-container">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+  <!-- Título y botones  -->
+  <div class="title-section">
+    <h1 class="main-title">GESTIÓN DE OBRAS</h1>
+    <div class="action-buttons">
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.AGREGAR"
+        (click)="setModoAccion(ModoAccion.AGREGAR)"
+        title="Agregar obra">
+        <i class="bi bi-plus-circle"></i>
+      </button>
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.EDITAR"
+        (click)="setModoAccion(ModoAccion.EDITAR)"
+        title="Editar obra">
+        <i class="bi bi-pencil-square"></i>
+      </button>
+      <button
+        class="btn-action"
+        [class.active]="modoActual === ModoAccion.ELIMINAR"
+        (click)="setModoAccion(ModoAccion.ELIMINAR)"
+        title="Eliminar obra">
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+<div class="search-section">
+  <div class="search-container">
+    <input
+      type="search"
+      [(ngModel)]="busqueda"
+      (input)="filtrarObras()"
+      placeholder="Buscar obras..."
+      class="search-input">
+
+    <button class="search-btn">
+      <i class="bi bi-search"></i>
+    </button>
+  </div>
+</div>
+
+
+  <!-- Mensajes-->
+  <div *ngIf="mensajeAccion" class="mensaje-accion">
+    <p>{{ mensajeAccion }}</p>
+    <button class="btn-cancelar-accion" (click)="cancelarAccion()">Cancelar</button>
+  </div>
+  <div *ngIf="cargando" class="loading-container">
+    <div class="spinner"></div>
+    <p>Cargando obras...</p>
+  </div>
+  <div *ngIf="error && !cargando" class="alert-error">
+    <p>{{ error }}</p>
+    <button (click)="cargarObras()">Reintentar</button>
+  </div>
+
+  <div *ngIf="!cargando && !error" class="obras-grid">
+    <div
+      class="obra-card"
+      *ngFor="let obra of obrasFiltradas"
+      [class.seleccionable]="modoSeleccion"
+      [class.seleccionada]="obraSeleccionada?.id === obra.id"
+      (click)="seleccionarObra(obra)">
+
+      <div class="obra-imagen-container">
+        <img
+          [src]="getImagenUrl(obra.imagen)"
+          [alt]="obra.titulo"
+          (error)="$any($event.target).src='assets/imagenes/default.jpg'"
+          class="obra-imagen">
+
+        <span class="estado-badge" [class]="obra.estado">
+          {{ getEstadoTexto(obra.estado) }}
+        </span>
+
+        <div *ngIf="modoSeleccion && obraSeleccionada?.id === obra.id" class="check-mark">
+          ✓
+        </div>
+      </div>
+
+      <div class="obra-info">
+        <h3 class="obra-nombre">{{ obra.titulo }}</h3>
+        <p class="obra-artista">{{ obra.nombre_artista || getNombreArtista(obra.artista_id) }}</p>
+        <p class="obra-detalle">{{ obra.tecnica }}</p>
+        <p class="obra-precio" *ngIf="obra.precio">{{ obra.precio | currency: 'USD':'symbol':'1.0-0' }}</p>
+      </div>
+    </div>
+
+
+    <div *ngIf="obrasFiltradas.length === 0" class="sin-resultados">
+      <p>No se encontraron obras</p>
+    </div>
+  </div>
+
+  <!-- Modal para agregar/editar/ver -->
+  <div class="modal-overlay" *ngIf="mostrarModal" (click)="cerrarModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+
+      <div class="modal-left">
+        <div class="modal-imagen-container">
+          <img
+            [src]="getImagenUrl(obraSeleccionada?.imagen)"
+            [alt]="obraSeleccionada?.titulo"
+            (error)="$any($event.target).src='assets/imagenes/default.jpg'"
+            class="modal-imagen">
+        </div>
+        <p class="modal-artista" *ngIf="obraSeleccionada?.artista_id">
+          {{ getNombreArtista(obraSeleccionada?.artista_id!) }}
+        </p>
+        <span class="modal-estado-badge" [class]="obraSeleccionada?.estado">
+          {{ getEstadoTexto(obraSeleccionada?.estado) }}
+        </span>
+      </div>
+
+      <!-- Formulario -->
+      <div class="modal-right">
+          <button class="btn-close" (click)="cerrarModal()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        <h2 class="modal-titulo">
+          {{ modoActual === ModoAccion.AGREGAR ? 'Nueva Obra' :
+             modoActual === ModoAccion.EDITAR ? 'Editar Obra' :
+             'Detalle de Obra' }}
+        </h2>
+
+        <form class="modal-form" (ngSubmit)="guardarObra()">
+
+          <!-- Campo: Título -->
+          <div class="form-group">
+            <label>Título: *</label>
+            <input
+              type="text"
+              [(ngModel)]="obraSeleccionada!.titulo"
+              name="titulo"
+              required
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Artista -->
+          <div class="form-group">
+            <label>Artista: *</label>
+            <select
+              [(ngModel)]="obraSeleccionada!.artista_id"
+              name="artista_id"
+              required
+              [disabled]="soloLectura"
+              class="form-input">
+              <option value="">Seleccione un artista</option>
+              <option *ngFor="let artista of artistas" [value]="artista.id">
+                {{ artista.nombre }} {{ artista.apellido }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Campo: Descripción -->
+          <div class="form-group">
+            <label>Descripción:</label>
+            <textarea
+              [(ngModel)]="obraSeleccionada!.descripcion"
+              name="descripcion"
+              rows="3"
+              [readonly]="soloLectura"
+              class="form-textarea"></textarea>
+          </div>
+
+          <!-- Campo: Técnica -->
+          <div class="form-group">
+            <label>Técnica: *</label>
+            <input
+              type="text"
+              [(ngModel)]="obraSeleccionada!.tecnica"
+              name="tecnica"
+              required
+              placeholder="Ej: Óleo sobre lienzo"
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Dimensiones -->
+          <div class="form-group">
+            <label>Dimensiones:</label>
+            <input
+              type="text"
+              [(ngModel)]="obraSeleccionada!.dimensiones"
+              name="dimensiones"
+              placeholder="Ej: 150 x 140 cm"
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Año -->
+          <div class="form-group">
+            <label>Año de creación:</label>
+            <input
+              type="number"
+              [(ngModel)]="obraSeleccionada!.anio"
+              name="anio"
+              min="1000"
+              [max]="2025"
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Precio -->
+          <div class="form-group">
+            <label>Precio:</label>
+            <input
+              type="number"
+              [(ngModel)]="obraSeleccionada!.precio"
+              name="precio"
+              step="0.01"
+              min="0"
+              [readonly]="soloLectura"
+              class="form-input">
+          </div>
+
+          <!-- Campo: Estado -->
+          <div class="form-group">
+            <label>Estado:</label>
+            <select
+              [(ngModel)]="obraSeleccionada!.estado"
+              name="estado"
+              [disabled]="soloLectura"
+              class="form-input">
+              <option value="disponible">Disponible</option>
+              <option value="vendida">Vendida</option>
+              <option value="reservada">Reservada</option>
+              <option value="en_exposicion">En Exposición</option>
+            </select>
+          </div>
+
+          <!-- Campo: URL de imagen -->
+          <div class="form-group">
+            <label>Nombre de imagen: *</label>
+            <input
+              type="text"
+              [(ngModel)]="obraSeleccionada!.imagen"
+              name="imagen"
+              required
+              placeholder="pintura1.jpg"
+              [readonly]="soloLectura"
+              class="form-input">
+            <small style="color: #7f8c8d; display: block; margin-top: 0.25rem;">
+              Solo escribe el nombre del archivo (ej: pintura1.jpg). Las imágenes deben estar en assets/imagenes/
+            </small>
+          </div>
+
+          <!-- Botón Guardar -->
+          <button
+            *ngIf="!soloLectura"
+            type="submit"
+            class="btn-guardar">
+            {{ modoActual === ModoAccion.EDITAR ? 'Actualizar Obra' : 'Guardar Obra' }}
+          </button>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>

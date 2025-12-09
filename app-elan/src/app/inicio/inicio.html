@@ -1,0 +1,97 @@
+
+<main class="login-main">
+  <div class="image-container inicio-background">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Imagen de fondo -->
+    <img src="assets/imagenes/ImagenInicio.jpg" alt="ImagenInicio" class="background-image" />
+
+    <!-- Logo -->
+    <div class="logo-container">
+      <img src="assets/imagenes/ELAN.png" alt="LOGO" class="background-image2" />
+    </div>
+
+    <!-- Tarjeta de login -->
+    <div class="card-container glass-effect invitation-box">
+
+      <!-- Icono de usuario -->
+      <div class="user-icon-container">
+        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16">
+          <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
+        </svg>
+      </div>
+
+      <!-- Formulario de login -->
+      <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="login-form">
+
+        <!-- Mensaje de error -->
+        <div *ngIf="errorMessage" class="alert alert-error">
+          <span>{{ errorMessage }}</span>
+          <button type="button" class="btn-close-alert" (click)="clearError()">✕</button>
+        </div>
+
+        <!-- Campo Usuario -->
+        <div class="mb-3">
+          <label class="form-label">Usuario:</label>
+          <input
+            type="text"
+            class="form-control"
+            name="email"
+            required
+            [(ngModel)]="model.email"
+            #email="ngModel"
+            [disabled]="isLoading"
+            placeholder="Ingresa tu usuario"
+            (focus)="clearError()" />
+
+          <div *ngIf="email.invalid && email.touched" class="text-danger small">
+            Este campo es obligatorio
+          </div>
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div class="mb-3">
+          <label class="form-label">Contraseña:</label>
+          <div class="password-container">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              class="form-control"
+              name="password"
+              required
+              minlength="8"
+              [(ngModel)]="model.password"
+              #password="ngModel"
+              [disabled]="isLoading"
+              placeholder="Mínimo 8 caracteres"
+              (focus)="clearError()" />
+
+            <button
+              type="button"
+              class="btn-toggle-password"
+              (click)="togglePasswordVisibility()"
+              [disabled]="isLoading">
+             <i *ngIf="!showPassword" class="bi bi-eye"></i>
+             <i *ngIf="showPassword" class="bi bi-eye-slash"></i>
+            </button>
+          </div>
+
+          <div *ngIf="password.invalid && password.touched" class="text-danger small">
+            Este campo es obligatorio, ingresa mínimo 8 caracteres
+          </div>
+        </div>
+
+        <!-- Botón de envío -->
+        <button
+          type="submit"
+          class="btn btn-primary w-100"
+          [disabled]="f.invalid || isLoading">
+          <span *ngIf="!isLoading">Iniciar Sesión</span>
+          <span *ngIf="isLoading" class="spinner-container">
+            <span class="spinner"></span>
+            Iniciando...
+          </span>
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
